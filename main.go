@@ -32,12 +32,12 @@ var tileMap = []string{
 	"..........",
 	"..........",
 	"..........",
-	".........x",
-	".........x",
-	"........xx",
-	".......xxx",
-	"......xxxx",
-	"xxxxxxxxxx",
+	"..........",
+	"..........",
+	"..........",
+	"..........",
+	"......x...",
+	//"xxxxxxxxxx",
 }
 
 type tile struct {
@@ -52,7 +52,7 @@ func loadTiles() {
 			if c == 'x' {
 				tiles = append(tiles, tile{
 					x: float64(30 * col),
-					y: float64(30 * row),
+					y: float64(240 - 30 - 30*row),
 				})
 			}
 		}
@@ -85,19 +85,29 @@ func (g *Game) handleInput() {
 	}
 }
 
-func (g *Game) Update() error {
-	g.handleInput()
-	g.RectX += g.vX
-	g.RectY += g.vY
-	if g.RectY <= 0 {
-		g.vY = 0
-		g.RectY = 0
-		isOnFloor = true
-	} else {
-		isOnFloor = false
-		g.vY -= 1.0
-		g.vY *= 0.99
+func (g *Game) overlaps(t tile) bool {
+	// TODO(lutzky): This is ugly, we need to pass the player, not the game
+
+	// TODO(lutzky): Things actually aren't pixel-perfect; the tiles are 30x30 and they are
+	// positions 0..30,30..60 - i.e. they have an overlap
+
+	return g.RectX+30 >= t.x && g.RectX <= t.x+30 &&
+		g.RectY+30 >= t.y && g.RectY <= t.y+30
+}
+
+func (g *Game) handleXCollisions() {
+	for _, t := range tiles {
+		if g.overlaps(t) {
+			if g.vX > 0 {
+				g.RectX = t.x - 30
+			} else {
+				g.RectX = t.x + 30
+			}
+			g.vX = 0
+		}
+
 	}
+
 	if g.RectX > 320-30 {
 		g.RectX = 320 - 30
 		g.vX = -g.vX
@@ -105,13 +115,43 @@ func (g *Game) Update() error {
 		g.RectX = 0
 		g.vX = -g.vX
 	}
+}
+
+func (g *Game) handleYCollisions() {
+	for _, t := range tiles {
+		if g.overlaps(t) {
+			if g.vY > 0 {
+				g.RectY = t.y - 30
+			} else {
+				g.RectY = t.y + 30
+				isOnFloor = true
+			}
+			g.vY = 0
+		}
+
+	}
+}
+
+func (g *Game) Update() error {
+	g.handleInput()
+	g.RectX += g.vX
+	g.handleXCollisions()
+	g.RectY += g.vY
+	g.vY -= 1.0
+	g.vY *= 0.99
+	g.handleYCollisions()
+	if g.RectY <= 0 {
+		g.vY = 0
+		g.RectY = 0
+		isOnFloor = true
+	}
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DrawRect(screen, g.RectX, 240-30-g.RectY, 30, 30, playerColor)
 	for _, t := range tiles {
-		ebitenutil.DrawRect(screen, t.x, t.y, 30, 30, color.White)
+		ebitenutil.DrawRect(screen, t.x, 240-30-t.y, 30, 30, color.White)
 	}
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("Pos: (%3.0f,%3.0f) V: (%3.1f,%3.1f)", g.RectX, g.RectY, g.vX, g.vY))
 }
