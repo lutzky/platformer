@@ -28,6 +28,37 @@ var (
 	jumpPressed = false
 )
 
+var tileMap = []string{
+	"..........",
+	"..........",
+	"..........",
+	".........x",
+	".........x",
+	"........xx",
+	".......xxx",
+	"......xxxx",
+	"xxxxxxxxxx",
+}
+
+type tile struct {
+	x, y float64
+}
+
+var tiles []tile
+
+func loadTiles() {
+	for row, s := range tileMap {
+		for col, c := range s {
+			if c == 'x' {
+				tiles = append(tiles, tile{
+					x: float64(30 * col),
+					y: float64(30 * row),
+				})
+			}
+		}
+	}
+}
+
 func (g *Game) handleInput() {
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		g.vX += 0.1
@@ -42,7 +73,7 @@ func (g *Game) handleInput() {
 		g.vX = -maxVX
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+	if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
 		if !jumpPressed {
 			jumpPressed = true
 			if isOnFloor {
@@ -79,6 +110,9 @@ func (g *Game) Update() error {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DrawRect(screen, g.RectX, 240-30-g.RectY, 30, 30, playerColor)
+	for _, t := range tiles {
+		ebitenutil.DrawRect(screen, t.x, t.y, 30, 30, color.White)
+	}
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("Pos: (%3.0f,%3.0f) V: (%3.1f,%3.1f)", g.RectX, g.RectY, g.vX, g.vY))
 }
 
@@ -91,6 +125,8 @@ func main() {
 	ebiten.SetWindowSize(640, 480)
 	log.Print("Setting window title")
 	ebiten.SetWindowTitle("Hello, World!")
+	log.Print("Loading tiles")
+	loadTiles()
 	log.Print("Running game")
 	if err := ebiten.RunGame(&Game{
 		RectX: 30,
