@@ -18,8 +18,14 @@ type Game struct {
 }
 
 const (
-	maxVX    = 5
-	friction = 0.05
+	maxVX        = 5
+	friction     = 0.05
+	playerHeight = 30
+	playerWidth  = 30
+	tileHeight   = 30
+	tileWidth    = 30
+	screenHeight = 240
+	screenWidth  = 320
 )
 
 var (
@@ -51,8 +57,8 @@ func loadTiles() {
 		for col, c := range s {
 			if c == 'x' {
 				tiles = append(tiles, tile{
-					x: float64(30 * col),
-					y: float64(240 - 30 - 30*row),
+					x: float64(tileWidth * col),
+					y: float64(tileHeight * row),
 				})
 			}
 		}
@@ -77,7 +83,7 @@ func (g *Game) handleInput() {
 		if !jumpPressed {
 			jumpPressed = true
 			if isOnFloor {
-				g.vY = 10
+				g.vY = -10
 			}
 		}
 	} else {
@@ -91,25 +97,25 @@ func (g *Game) overlaps(t tile) bool {
 	// TODO(lutzky): Things actually aren't pixel-perfect; the tiles are 30x30 and they are
 	// positions 0..30,30..60 - i.e. they have an overlap
 
-	return g.RectX+30 >= t.x && g.RectX <= t.x+30 &&
-		g.RectY+30 >= t.y && g.RectY <= t.y+30
+	return g.RectX+playerWidth >= t.x && g.RectX <= t.x+tileWidth &&
+		g.RectY+playerHeight >= t.y && g.RectY <= t.y+tileHeight
 }
 
 func (g *Game) handleXCollisions() {
 	for _, t := range tiles {
 		if g.overlaps(t) {
 			if g.vX > 0 {
-				g.RectX = t.x - 30
+				g.RectX = t.x - tileWidth
 			} else {
-				g.RectX = t.x + 30
+				g.RectX = t.x + tileWidth
 			}
 			g.vX = 0
 		}
 
 	}
 
-	if g.RectX > 320-30 {
-		g.RectX = 320 - 30
+	if g.RectX > screenWidth-playerWidth {
+		g.RectX = screenWidth - playerWidth
 		g.vX = -g.vX
 	} else if g.RectX < 0 {
 		g.RectX = 0
@@ -121,24 +127,24 @@ func (g *Game) handleYCollisions() {
 	for _, t := range tiles {
 		if g.overlaps(t) {
 			if g.vY > 0 {
-				g.RectY = t.y - 30
+				g.RectY = t.y - tileHeight
 			} else {
-				g.RectY = t.y + 30
+				g.RectY = t.y + tileHeight - playerHeight
 				isOnFloor = true
 			}
 			g.vY = 0
 		}
 	}
 
-	if g.RectY <= 0 {
+	if g.RectY >= screenHeight-playerHeight {
 		g.vY = 0
-		g.RectY = 0
+		g.RectY = screenHeight - playerHeight
 		isOnFloor = true
 	}
 }
 
 func (g *Game) applyGravity() {
-	g.vY -= 1.0
+	g.vY += 1.0
 	g.vY *= 0.99
 }
 
@@ -153,20 +159,20 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	ebitenutil.DrawRect(screen, g.RectX, 240-30-g.RectY, 30, 30, playerColor)
+	ebitenutil.DrawRect(screen, g.RectX, g.RectY, playerWidth, playerHeight, playerColor)
 	for _, t := range tiles {
-		ebitenutil.DrawRect(screen, t.x, 240-30-t.y, 30, 30, color.White)
+		ebitenutil.DrawRect(screen, t.x, t.y, tileWidth, tileHeight, color.White)
 	}
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("Pos: (%3.0f,%3.0f) V: (%3.1f,%3.1f)", g.RectX, g.RectY, g.vX, g.vY))
 }
 
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 320, 240
+func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+	return screenWidth, screenHeight
 }
 
 func main() {
 	log.Print("Initializing, setting window size")
-	ebiten.SetWindowSize(640, 480)
+	ebiten.SetWindowSize(2*screenWidth, 2*screenHeight)
 	log.Print("Setting window title")
 	ebiten.SetWindowTitle("Hello, World!")
 	log.Print("Loading tiles")
