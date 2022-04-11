@@ -43,7 +43,7 @@ var tileMap = []string{
 	"..x.....xx",
 	"...x...xxx",
 	"......xxxx",
-	//"xxxxxxxxxx",
+	"xxxxxxxxxx",
 }
 
 type tile struct {
@@ -101,6 +101,18 @@ func (g *Game) overlaps(t tile) bool {
 		g.RectY+playerHeight > t.y && g.RectY < t.y+tileHeight
 }
 
+func (g *Game) checkIsOnFloor() {
+	playerBottom := g.RectY + playerHeight
+	for _, t := range tiles {
+		if g.RectX+playerWidth >= t.x && g.RectX <= t.x+tileWidth &&
+			playerBottom == t.y {
+			isOnFloor = true
+			return
+		}
+	}
+	isOnFloor = false
+}
+
 func (g *Game) handleXCollisions() {
 	for _, t := range tiles {
 		if g.overlaps(t) {
@@ -129,26 +141,23 @@ func (g *Game) handleYCollisions() {
 			if g.vY > 0 {
 				g.RectY = t.y - tileHeight
 			} else {
-				g.RectY = t.y + tileHeight - playerHeight
-				isOnFloor = true
+				g.RectY = t.y + tileHeight
 			}
 			g.vY = 0
 		}
 	}
-
-	if g.RectY >= screenHeight-playerHeight {
-		g.vY = 0
-		g.RectY = screenHeight - playerHeight
-		isOnFloor = true
-	}
 }
 
 func (g *Game) applyGravity() {
+	if isOnFloor {
+		return
+	}
 	g.vY += 1.0
 	g.vY *= 0.99
 }
 
 func (g *Game) Update() error {
+	g.checkIsOnFloor()
 	g.handleInput()
 	g.RectX += g.vX
 	g.handleXCollisions()
@@ -163,7 +172,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, t := range tiles {
 		ebitenutil.DrawRect(screen, t.x, t.y, tileWidth, tileHeight, color.White)
 	}
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("Pos: (%3.0f,%3.0f) V: (%3.1f,%3.1f)", g.RectX, g.RectY, g.vX, g.vY))
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("Pos: (%3.0f,%3.0f) V: (%3.1f,%3.1f), IoF: %t",
+		g.RectX, g.RectY, g.vX, g.vY, isOnFloor))
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
