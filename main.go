@@ -21,15 +21,20 @@ var game = Game{
 }
 
 type Player struct {
-	vX, vY    float64
-	rect      rectangle.Rectangle[float64]
-	isOnFloor bool
-	color     color.Color
+	vX, vY                 float64
+	rect                   rectangle.Rectangle[float64]
+	isOnFloor              bool
+	color                  color.Color
+	friction, acceleration float64
+	maxVX                  float64
 }
 
 var player = Player{
-	color: color.RGBA{0, 0, 255, 255},
-	rect:  rectangle.Rect[float64](0, 0, 30, 30),
+	color:        color.RGBA{0, 0, 255, 255},
+	rect:         rectangle.Rect[float64](0, 0, 30, 30),
+	friction:     0.05,
+	acceleration: 0.3,
+	maxVX:        5,
 }
 
 func (player *Player) draw(dst *ebiten.Image) {
@@ -38,8 +43,6 @@ func (player *Player) draw(dst *ebiten.Image) {
 }
 
 const (
-	maxVX        = 5
-	friction     = 0.05
 	tileHeight   = 30
 	tileWidth    = 30
 	screenHeight = 240
@@ -90,17 +93,24 @@ func (g *Game) handleInput() {
 		fmt.Println("Exiting")
 		os.Exit(0)
 	}
+
+	var dVX float64
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		player.vX += 0.1
+		dVX = player.acceleration
 	} else if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		player.vX -= 0.1
-	} else {
-		player.vX *= (1 - friction)
+		dVX = -player.acceleration
 	}
-	if player.vX > maxVX {
-		player.vX = maxVX
-	} else if player.vX < -maxVX {
-		player.vX = -maxVX
+
+	if dVX*player.vX <= 0 {
+		// Apply friction unless accelerating in the current movement direction
+		player.vX *= (1 - player.friction)
+	}
+	player.vX += dVX
+
+	if player.vX > player.maxVX {
+		player.vX = player.maxVX
+	} else if player.vX < -player.maxVX {
+		player.vX = -player.maxVX
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
