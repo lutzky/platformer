@@ -13,6 +13,11 @@ import (
 )
 
 type Game struct {
+	gravity float64
+}
+
+var game = Game{
+	gravity: 0.8,
 }
 
 var player = struct {
@@ -159,8 +164,7 @@ func (g *Game) applyGravity() {
 	if player.isOnFloor {
 		return
 	}
-	player.vY += 1.0
-	player.vY *= 0.99
+	player.vY += g.gravity
 }
 
 func (g *Game) Update() error {
@@ -195,7 +199,7 @@ func main() {
 	log.Print("Loading tiles")
 	loadTiles()
 	log.Print("Running game")
-	if err := ebiten.RunGame(&Game{}); err != nil {
+	if err := ebiten.RunGame(&game); err != nil {
 		log.Fatal(err)
 	}
 }
