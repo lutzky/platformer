@@ -20,17 +20,19 @@ var game = Game{
 	gravity: 0.8,
 }
 
-var player = struct {
+type Player struct {
 	vX, vY    float64
 	rect      rectangle.Rectangle[float64]
 	isOnFloor bool
 	color     color.Color
-}{
+}
+
+var player = Player{
 	color: color.RGBA{0, 0, 255, 255},
 	rect:  rectangle.Rect[float64](0, 0, 30, 30),
 }
 
-func drawPlayer(dst *ebiten.Image) {
+func (player *Player) draw(dst *ebiten.Image) {
 	ebitenutil.DrawRect(dst, player.rect.Min.X, player.rect.Min.Y,
 		player.rect.Width(), player.rect.Height(), player.color)
 }
@@ -179,7 +181,7 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	drawPlayer(screen)
+	player.draw(screen)
 	for _, t := range tiles {
 		ebitenutil.DrawRect(screen, t.x, t.y, tileWidth, tileHeight, color.White)
 	}
