@@ -34,6 +34,7 @@ type Player struct {
 
 	friction, acceleration float64
 	maxVX                  float64
+	terminalVelocityY      float64
 
 	jumpSpeed      float64
 	jumpHoverSpeed float64
@@ -48,9 +49,10 @@ var player = Player{
 
 	rect: rectangle.Rect[float64](0, 0, 32, 32),
 
-	friction:     0.08,
-	acceleration: 0.3,
-	maxVX:        5,
+	friction:          0.08,
+	acceleration:      0.3,
+	maxVX:             5,
+	terminalVelocityY: 9,
 
 	jumpSpeed:      12,
 	jumpHoverSpeed: 3,
@@ -225,6 +227,9 @@ func (g *Game) applyGravity() {
 		return
 	}
 	player.vY += g.gravity
+	if player.vY > player.terminalVelocityY {
+		player.vY = player.terminalVelocityY
+	}
 }
 
 func (g *Game) Update() error {
