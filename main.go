@@ -117,7 +117,7 @@ func (g *Game) handleXCollisions() {
 	for _, t := range tiles {
 		if g.overlaps(t) {
 			if g.vX > 0 {
-				g.RectX = t.x - tileWidth
+				g.RectX = t.x - playerWidth
 			} else {
 				g.RectX = t.x + tileWidth
 			}
@@ -139,7 +139,7 @@ func (g *Game) handleYCollisions() {
 	for _, t := range tiles {
 		if g.overlaps(t) {
 			if g.vY > 0 {
-				g.RectY = t.y - tileHeight
+				g.RectY = t.y - playerHeight
 			} else {
 				g.RectY = t.y + tileHeight
 			}
