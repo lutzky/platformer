@@ -21,22 +21,32 @@ var game = Game{
 }
 
 type Player struct {
-	vX, vY                       float64
-	rect                         rectangle.Rectangle[float64]
+	vX, vY float64
+	rect   rectangle.Rectangle[float64]
+
 	isOnFloor, isJumping         bool
 	color, colorJump, colorFloor color.Color
-	friction, acceleration       float64
-	maxVX                        float64
+
+	friction, acceleration float64
+	maxVX                  float64
+
+	jumpSpeed      float64
+	jumpHoverSpeed float64
 }
 
 var player = Player{
-	color:        color.RGBA{0, 0, 255, 255},
-	colorJump:    color.RGBA{255, 0, 255, 255},
-	colorFloor:   color.RGBA{0, 255, 255, 255},
-	rect:         rectangle.Rect[float64](0, 0, 30, 30),
+	color:      color.RGBA{0, 0, 255, 255},
+	colorJump:  color.RGBA{255, 0, 255, 255},
+	colorFloor: color.RGBA{0, 255, 255, 255},
+
+	rect: rectangle.Rect[float64](0, 0, 30, 30),
+
 	friction:     0.08,
 	acceleration: 0.3,
 	maxVX:        5,
+
+	jumpSpeed:      12,
+	jumpHoverSpeed: 3,
 }
 
 func (player *Player) draw(dst *ebiten.Image) {
@@ -121,18 +131,21 @@ func (g *Game) handleInput() {
 		player.vX = -player.maxVX
 	}
 
+	if player.vY >= 0 {
+		player.isJumping = false
+	}
 	if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
 		if !jumpPressed {
 			jumpPressed = true
 			if player.isOnFloor {
-				player.vY = -16
+				player.vY = -player.jumpSpeed
 				player.isJumping = true
 			}
 		}
 	} else {
 		jumpPressed = false
-		if player.isJumping {
-			player.vY = 0
+		if player.isJumping && player.vY < -player.jumpHoverSpeed {
+			player.vY = -player.jumpHoverSpeed
 		}
 		player.isJumping = false
 	}
