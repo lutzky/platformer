@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"log"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -20,8 +21,6 @@ type Game struct {
 const (
 	maxVX        = 5
 	friction     = 0.05
-	playerHeight = 30
-	playerWidth  = 30
 	tileHeight   = 30
 	tileWidth    = 30
 	screenHeight = 240
@@ -29,9 +28,11 @@ const (
 )
 
 var (
-	playerColor = color.RGBA{0, 0, 255, 255}
-	isOnFloor   = true
-	jumpPressed = false
+	playerColor  = color.RGBA{0, 0, 255, 255}
+	playerHeight = float64(30)
+	playerWidth  = float64(30)
+	isOnFloor    = true
+	jumpPressed  = false
 )
 
 var tileMap = []string{
@@ -66,6 +67,10 @@ func loadTiles() {
 }
 
 func (g *Game) handleInput() {
+	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+		fmt.Println("Exiting")
+		os.Exit(0)
+	}
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		g.vX += 0.1
 	} else if ebiten.IsKeyPressed(ebiten.KeyLeft) {
@@ -142,6 +147,8 @@ func (g *Game) handleYCollisions() {
 				g.RectY = t.y - playerHeight
 			} else {
 				g.RectY = t.y + tileHeight
+				playerHeight *= 0.9
+				playerWidth *= 0.9
 			}
 			g.vY = 0
 		}
