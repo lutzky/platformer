@@ -97,8 +97,8 @@ func (g *Game) overlaps(t tile) bool {
 	// TODO(lutzky): Things actually aren't pixel-perfect; the tiles are 30x30 and they are
 	// positions 0..30,30..60 - i.e. they have an overlap
 
-	return g.RectX+playerWidth >= t.x && g.RectX <= t.x+tileWidth &&
-		g.RectY+playerHeight >= t.y && g.RectY <= t.y+tileHeight
+	return g.RectX+playerWidth > t.x && g.RectX < t.x+tileWidth &&
+		g.RectY+playerHeight > t.y && g.RectY < t.y+tileHeight
 }
 
 func (g *Game) handleXCollisions() {
