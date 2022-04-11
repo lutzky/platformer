@@ -8,14 +8,26 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+
+	"github.com/lutzky/platformer/rectangle"
 )
 
 type Game struct {
-	RectX float64
-	RectY float64
+}
 
-	vX float64
-	vY float64
+var player = struct {
+	vX, vY    float64
+	rect      rectangle.Rectangle[float64]
+	isOnFloor bool
+	color     color.Color
+}{
+	color: color.RGBA{0, 0, 255, 255},
+	rect:  rectangle.Rect[float64](0, 0, 30, 30),
+}
+
+func drawPlayer(dst *ebiten.Image) {
+	ebitenutil.DrawRect(dst, player.rect.Min.X, player.rect.Min.Y,
+		player.rect.Width(), player.rect.Height(), player.color)
 }
 
 const (
@@ -28,11 +40,7 @@ const (
 )
 
 var (
-	playerColor  = color.RGBA{0, 0, 255, 255}
-	playerHeight = float64(30)
-	playerWidth  = float64(30)
-	isOnFloor    = true
-	jumpPressed  = false
+	jumpPressed = false
 )
 
 var tileMap = []string{
@@ -49,6 +57,10 @@ var tileMap = []string{
 
 type tile struct {
 	x, y float64
+}
+
+func (t tile) rect() rectangle.Rectangle[float64] {
+	return rectangle.Rect(t.x, t.y, t.x+tileWidth, t.y+tileHeight)
 }
 
 var tiles []tile
@@ -72,23 +84,23 @@ func (g *Game) handleInput() {
 		os.Exit(0)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.vX += 0.1
+		player.vX += 0.1
 	} else if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.vX -= 0.1
+		player.vX -= 0.1
 	} else {
-		g.vX *= (1 - friction)
+		player.vX *= (1 - friction)
 	}
-	if g.vX > maxVX {
-		g.vX = maxVX
-	} else if g.vX < -maxVX {
-		g.vX = -maxVX
+	if player.vX > maxVX {
+		player.vX = maxVX
+	} else if player.vX < -maxVX {
+		player.vX = -maxVX
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
 		if !jumpPressed {
 			jumpPressed = true
-			if isOnFloor {
-				g.vY = -16
+			if player.isOnFloor {
+				player.vY = -16
 			}
 		}
 	} else {
@@ -96,86 +108,79 @@ func (g *Game) handleInput() {
 	}
 }
 
-func (g *Game) overlaps(t tile) bool {
-	return g.RectX+playerWidth > t.x && g.RectX < t.x+tileWidth &&
-		g.RectY+playerHeight > t.y && g.RectY < t.y+tileHeight
-}
-
 func (g *Game) checkIsOnFloor() {
-	playerBottom := g.RectY + playerHeight
 	for _, t := range tiles {
-		if g.RectX+playerWidth >= t.x && g.RectX <= t.x+tileWidth &&
-			playerBottom == t.y {
-			isOnFloor = true
+		if player.rect.Max.X >= t.x && player.rect.Min.X <= t.x+tileWidth &&
+			player.rect.Max.Y == t.y {
+			player.isOnFloor = true
 			return
 		}
 	}
-	isOnFloor = false
+	player.isOnFloor = false
 }
 
 func (g *Game) handleXCollisions() {
 	for _, t := range tiles {
-		if g.overlaps(t) {
-			if g.vX > 0 {
-				g.RectX = t.x - playerWidth
-			} else {
-				g.RectX = t.x + tileWidth
+		if player.rect.Overlaps(t.rect()) {
+			if player.vX > 0 {
+				player.rect.SetRight(t.rect().Min.X)
+			} else if player.vX < 0 {
+				player.rect.SetLeft(t.rect().Max.X)
 			}
-			g.vX = 0
+			player.vX = 0
 		}
 
 	}
 
-	if g.RectX > screenWidth-playerWidth {
-		g.RectX = screenWidth - playerWidth
-		g.vX = -g.vX
-	} else if g.RectX < 0 {
-		g.RectX = 0
-		g.vX = -g.vX
+	if player.rect.Max.X > screenWidth {
+		player.rect.SetRight(screenWidth)
+		player.vX *= -1
+	} else if player.rect.Min.X < 0 {
+		player.rect.SetLeft(0)
+		player.vX *= -1
 	}
 }
 
 func (g *Game) handleYCollisions() {
 	for _, t := range tiles {
-		if g.overlaps(t) {
-			if g.vY > 0 {
-				g.RectY = t.y - playerHeight
+		if player.rect.Overlaps(t.rect()) {
+			if player.vY > 0 {
+				player.rect.SetBottom(t.rect().Min.Y)
 			} else {
-				g.RectY = t.y + tileHeight
-				playerHeight *= 0.9
-				playerWidth *= 0.9
+				player.rect.SetTop(t.rect().Max.Y)
+				player.rect.Scale(0.9)
 			}
-			g.vY = 0
+			player.vY = 0
 		}
 	}
 }
 
 func (g *Game) applyGravity() {
-	if isOnFloor {
+	if player.isOnFloor {
 		return
 	}
-	g.vY += 1.0
-	g.vY *= 0.99
+	player.vY += 1.0
+	player.vY *= 0.99
 }
 
 func (g *Game) Update() error {
 	g.checkIsOnFloor()
 	g.handleInput()
-	g.RectX += g.vX
+	player.rect.MoveX(player.vX)
 	g.handleXCollisions()
-	g.RectY += g.vY
+	player.rect.MoveY(player.vY)
 	g.applyGravity()
 	g.handleYCollisions()
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	ebitenutil.DrawRect(screen, g.RectX, g.RectY, playerWidth, playerHeight, playerColor)
+	drawPlayer(screen)
 	for _, t := range tiles {
 		ebitenutil.DrawRect(screen, t.x, t.y, tileWidth, tileHeight, color.White)
 	}
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("Pos: (%3.0f,%3.0f) V: (%3.1f,%3.1f), IoF: %t",
-		g.RectX, g.RectY, g.vX, g.vY, isOnFloor))
+		player.rect.Min.X, player.rect.Min.Y, player.vX, player.vY, player.isOnFloor))
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -190,11 +195,7 @@ func main() {
 	log.Print("Loading tiles")
 	loadTiles()
 	log.Print("Running game")
-	if err := ebiten.RunGame(&Game{
-		RectX: 30,
-		RectY: 100,
-		vX:    0,
-	}); err != nil {
+	if err := ebiten.RunGame(&Game{}); err != nil {
 		log.Fatal(err)
 	}
 }
