@@ -128,8 +128,18 @@ func (g *Game) handleYCollisions() {
 			}
 			g.vY = 0
 		}
-
 	}
+
+	if g.RectY <= 0 {
+		g.vY = 0
+		g.RectY = 0
+		isOnFloor = true
+	}
+}
+
+func (g *Game) applyGravity() {
+	g.vY -= 1.0
+	g.vY *= 0.99
 }
 
 func (g *Game) Update() error {
@@ -137,14 +147,8 @@ func (g *Game) Update() error {
 	g.RectX += g.vX
 	g.handleXCollisions()
 	g.RectY += g.vY
-	g.vY -= 1.0
-	g.vY *= 0.99
+	g.applyGravity()
 	g.handleYCollisions()
-	if g.RectY <= 0 {
-		g.vY = 0
-		g.RectY = 0
-		isOnFloor = true
-	}
 	return nil
 }
 
