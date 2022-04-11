@@ -39,7 +39,10 @@ type Player struct {
 	jumpSpeed      float64
 	jumpHoverSpeed float64
 
-	scaling float64
+	scaling       float64
+	scalingFactor float64 // TODO(lutzky): Rename me
+
+	marginTop, marginLeft, marginBottom, marginRight float64
 }
 
 var player = Player{
@@ -57,7 +60,22 @@ var player = Player{
 	jumpSpeed:      12,
 	jumpHoverSpeed: 3,
 
-	scaling: 1,
+	scaling:       1,
+	scalingFactor: 1, // 0.9, TODO(lutzky): Set me back to 0.9
+
+	marginTop:    6,
+	marginLeft:   6,
+	marginRight:  6,
+	marginBottom: 0,
+}
+
+func (player *Player) hitbox() rectangle.Rectangle[float64] {
+	return rectangle.Rect(
+		player.rect.Min.X+player.marginLeft,
+		player.rect.Min.Y+player.marginTop,
+		player.rect.Max.X-player.marginRight,
+		player.rect.Max.Y-player.marginBottom,
+	)
 }
 
 func (player *Player) draw(dst *ebiten.Image) {
@@ -81,6 +99,18 @@ func (player *Player) draw(dst *ebiten.Image) {
 	op.GeoM.Scale(player.scaling, player.scaling)
 	op.GeoM.Translate(player.rect.Min.X, player.rect.Min.Y)
 	dst.DrawImage(sprite.GetFrame(), op)
+	if debug {
+		player.drawHitbox(dst)
+	}
+}
+
+func (player *Player) drawHitbox(dst *ebiten.Image) {
+	hb := player.hitbox()
+	c := color.White
+	ebitenutil.DrawLine(dst, hb.Min.X, hb.Min.Y, hb.Max.X, hb.Min.Y, c)
+	ebitenutil.DrawLine(dst, hb.Min.X, hb.Min.Y, hb.Min.X, hb.Max.Y, c)
+	ebitenutil.DrawLine(dst, hb.Min.X, hb.Max.Y, hb.Max.X, hb.Max.Y, c)
+	ebitenutil.DrawLine(dst, hb.Max.X, hb.Min.Y, hb.Max.X, hb.Max.Y, c)
 }
 
 const (
@@ -92,6 +122,7 @@ const (
 
 var (
 	jumpPressed = false
+	debug       = false
 )
 
 var tileMap = []string{
@@ -135,6 +166,8 @@ func (g *Game) handleInput() {
 		os.Exit(0)
 	}
 
+	debug = ebiten.IsKeyPressed(ebiten.KeyD)
+
 	var dVX float64
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		dVX = player.acceleration
@@ -175,9 +208,12 @@ func (g *Game) handleInput() {
 }
 
 func (g *Game) checkIsOnFloor() {
+	// TODO(lutzky): This uses hitbox inconsistently, and doesn't use rectangles
+	// for tiles
+	hb := player.hitbox()
 	for _, t := range tiles {
-		if player.rect.Max.X >= t.x && player.rect.Min.X <= t.x+tileWidth &&
-			player.rect.Max.Y == t.y {
+		if hb.Max.X >= t.x && hb.Min.X <= t.x+tileWidth &&
+			hb.Max.Y == t.y {
 			player.isOnFloor = true
 			return
 		}
@@ -186,14 +222,16 @@ func (g *Game) checkIsOnFloor() {
 }
 
 func (g *Game) handleXCollisions() {
+	hitbox := player.hitbox()
 	for _, t := range tiles {
-		if player.rect.Overlaps(t.rect()) {
+		if hitbox.Overlaps(t.rect()) {
 			if player.vX > 0 {
-				player.rect.SetRight(t.rect().Min.X)
+				player.rect.SetRight(t.rect().Min.X + player.marginRight)
+				player.vX = 0
 			} else if player.vX < 0 {
-				player.rect.SetLeft(t.rect().Max.X)
+				player.rect.SetLeft(t.rect().Max.X - player.marginLeft)
+				player.vX = -0.01
 			}
-			player.vX = 0
 		}
 
 	}
@@ -209,13 +247,13 @@ func (g *Game) handleXCollisions() {
 
 func (g *Game) handleYCollisions() {
 	for _, t := range tiles {
-		if player.rect.Overlaps(t.rect()) {
+		if player.hitbox().Overlaps(t.rect()) {
 			if player.vY > 0 {
 				player.rect.SetBottom(t.rect().Min.Y)
 			} else {
-				player.rect.SetTop(t.rect().Max.Y)
-				player.rect.Scale(0.9)
-				player.scaling *= 0.9
+				player.rect.SetTop(t.rect().Max.Y - player.marginTop)
+				player.rect.Scale(player.scalingFactor)
+				player.scaling *= player.scalingFactor
 			}
 			player.vY = 0
 		}
@@ -248,8 +286,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, t := range tiles {
 		ebitenutil.DrawRect(screen, t.x, t.y, tileWidth, tileHeight, color.White)
 	}
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("Pos: (%3.0f,%3.0f) V: (%3.1f,%3.1f), IoF: %t",
-		player.rect.Min.X, player.rect.Min.Y, player.vX, player.vY, player.isOnFloor))
+	if debug {
+		ebitenutil.DebugPrint(screen, fmt.Sprintf("Pos: (%3.0f,%3.0f) V: (%3.1f,%3.1f), IoF: %t",
+			player.rect.Min.X, player.rect.Min.Y, player.vX, player.vY, player.isOnFloor))
+	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
