@@ -37,12 +37,12 @@ var (
 var tileMap = []string{
 	"..........",
 	"..........",
+	"..xxxx....",
 	"..........",
-	"..........",
-	"..........",
-	"..........",
-	"..........",
-	"......x...",
+	".x.......x",
+	"..x.....xx",
+	"...x...xxx",
+	"......xxxx",
 	//"xxxxxxxxxx",
 }
 
@@ -83,7 +83,7 @@ func (g *Game) handleInput() {
 		if !jumpPressed {
 			jumpPressed = true
 			if isOnFloor {
-				g.vY = -10
+				g.vY = -16
 			}
 		}
 	} else {
