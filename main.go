@@ -4,12 +4,17 @@ import (
 	"fmt"
 	"image/color"
 	"log"
+	"math"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
 	"github.com/lutzky/platformer/rectangle"
+	"github.com/lutzky/platformer/sprites"
+
+	_ "embed"
+	_ "image/png"
 )
 
 type Game struct {
@@ -32,6 +37,8 @@ type Player struct {
 
 	jumpSpeed      float64
 	jumpHoverSpeed float64
+
+	scaling float64
 }
 
 var player = Player{
@@ -39,7 +46,7 @@ var player = Player{
 	colorJump:  color.RGBA{255, 0, 255, 255},
 	colorFloor: color.RGBA{0, 255, 255, 255},
 
-	rect: rectangle.Rect[float64](0, 0, 30, 30),
+	rect: rectangle.Rect[float64](0, 0, 32, 32),
 
 	friction:     0.08,
 	acceleration: 0.3,
@@ -47,17 +54,31 @@ var player = Player{
 
 	jumpSpeed:      12,
 	jumpHoverSpeed: 3,
+
+	scaling: 1,
 }
 
 func (player *Player) draw(dst *ebiten.Image) {
-	c := player.color
-	if player.isJumping {
-		c = player.colorJump
-	} else if player.isOnFloor {
-		c = player.colorFloor
+	var sprite *sprites.Sprite
+	switch {
+	case player.vY < -0.2:
+		sprite = sprites.Jump
+	case player.vY > 0.2:
+		sprite = sprites.Fall
+	case math.Abs(player.vX) > 0.2:
+		sprite = sprites.Run
+	default:
+		sprite = sprites.Idle
 	}
-	ebitenutil.DrawRect(dst, player.rect.Min.X, player.rect.Min.Y,
-		player.rect.Width(), player.rect.Height(), c)
+
+	op := &ebiten.DrawImageOptions{}
+	if player.vX < 0 {
+		op.GeoM.Scale(-1, 1)
+		op.GeoM.Translate(32, 0)
+	}
+	op.GeoM.Scale(player.scaling, player.scaling)
+	op.GeoM.Translate(player.rect.Min.X, player.rect.Min.Y)
+	dst.DrawImage(sprite.GetFrame(), op)
 }
 
 const (
@@ -192,6 +213,7 @@ func (g *Game) handleYCollisions() {
 			} else {
 				player.rect.SetTop(t.rect().Max.Y)
 				player.rect.Scale(0.9)
+				player.scaling *= 0.9
 			}
 			player.vY = 0
 		}
