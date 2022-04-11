@@ -32,7 +32,7 @@ type Player struct {
 var player = Player{
 	color:        color.RGBA{0, 0, 255, 255},
 	rect:         rectangle.Rect[float64](0, 0, 30, 30),
-	friction:     0.05,
+	friction:     0.08,
 	acceleration: 0.3,
 	maxVX:        5,
 }
