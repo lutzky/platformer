@@ -134,12 +134,11 @@ func (g *Game) handleXCollisions() {
 
 func (g *Game) handleYCollisions() {
 	hb := player.Hitbox()
-
 	for _, t := range tiles {
 		if hb.Overlaps(t.rect()) {
 			if player.VY > 0 {
 				player.SetBottom(t.rect().Min.Y)
-			} else {
+			} else if player.VY < 0 {
 				player.SetTop(t.rect().Max.Y)
 				player.Scale()
 			}
