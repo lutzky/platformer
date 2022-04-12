@@ -83,7 +83,6 @@ func (p *Player) MoveY(dY float64) {
 	p.rect.MoveY(dY)
 }
 
-// TODO(lutzky): Maybe unexport?
 func (p *Player) Hitbox() rectangle.Rectangle[float64] {
 	return rectangle.Rect(
 		p.rect.Min.X+p.marginLeft,

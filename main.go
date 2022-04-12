@@ -118,9 +118,9 @@ func (g *Game) checkIsOnFloor() {
 }
 
 func (g *Game) handleXCollisions() {
-	hitbox := player.Hitbox()
+	hb := player.Hitbox()
 	for _, t := range tiles {
-		if hitbox.Overlaps(t.rect()) {
+		if hb.Overlaps(t.rect()) {
 			if player.VX > 0 {
 				player.SetRight(t.rect().Min.X)
 				player.VX = 0
@@ -133,8 +133,10 @@ func (g *Game) handleXCollisions() {
 }
 
 func (g *Game) handleYCollisions() {
+	hb := player.Hitbox()
+
 	for _, t := range tiles {
-		if player.Hitbox().Overlaps(t.rect()) {
+		if hb.Overlaps(t.rect()) {
 			if player.VY > 0 {
 				player.SetBottom(t.rect().Min.Y)
 			} else {
