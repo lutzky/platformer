@@ -72,6 +72,5 @@ func (r *Rectangle[C]) Scale(factor float64) {
 	dY := C(0.5 * float64(r.Height()) * (1 - factor))
 	r.Min.X += dX
 	r.Max.X -= dX
-	r.Min.Y += dY
-	r.Max.Y -= dY
+	r.Min.Y += 2 * dY
 }

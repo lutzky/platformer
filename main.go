@@ -132,6 +132,17 @@ func (g *Game) handleXCollisions() {
 	}
 }
 
+func (g *Game) nearWalls() bool {
+	hb := player.Hitbox()
+	hb.Scale(player.ScalingRecoveryFactor)
+	for _, t := range tiles {
+		if hb.Overlaps(t.rect()) {
+			return true
+		}
+	}
+	return false
+}
+
 func (g *Game) handleYCollisions() {
 	hb := player.Hitbox()
 	for _, t := range tiles {
@@ -139,7 +150,7 @@ func (g *Game) handleYCollisions() {
 			if player.VY > 0 {
 				player.SetBottom(t.rect().Min.Y)
 			} else if player.VY < 0 {
-				player.Scale()
+				player.Scale(true)
 				player.SetTop(t.rect().Max.Y)
 			}
 			player.VY = 0
@@ -165,6 +176,9 @@ func (g *Game) Update() error {
 	player.MoveY(player.VY)
 	g.applyGravity()
 	g.handleYCollisions()
+	if !g.nearWalls() {
+		player.Scale(false)
+	}
 	return nil
 }
 

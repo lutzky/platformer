@@ -28,7 +28,8 @@ type Player struct {
 
 	scaling float64
 
-	scalingFactorOnHit float64
+	scalingFactorOnHit    float64
+	ScalingRecoveryFactor float64
 
 	marginTop, marginLeft, marginBottom, marginRight float64
 }
@@ -49,8 +50,9 @@ func New() Player {
 		jumpSpeed:      12,
 		jumpHoverSpeed: 3,
 
-		scaling:            1,
-		scalingFactorOnHit: 0.9,
+		scaling:               1,
+		scalingFactorOnHit:    0.9,
+		ScalingRecoveryFactor: 1.003,
 
 		marginTop:    6,
 		marginLeft:   6,
@@ -145,9 +147,19 @@ func (p *Player) HandleJump(jumpKeyDown bool) {
 	}
 }
 
-func (p *Player) Scale() {
-	p.rect.Scale(p.scalingFactorOnHit)
-	p.scaling *= p.scalingFactorOnHit
+func (p *Player) Scale(shrink bool) {
+	factor := p.scalingFactorOnHit
+	if !shrink {
+		if !p.IsOnFloor || math.Abs(p.VX) > 0.1 {
+			return
+		}
+		if p.scaling >= 1.0 {
+			return
+		}
+		factor = p.ScalingRecoveryFactor
+	}
+	p.rect.Scale(factor)
+	p.scaling *= factor
 }
 
 func (p *Player) DebugString() string {
