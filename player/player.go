@@ -26,8 +26,9 @@ type Player struct {
 	jumpHoverSpeed float64
 	jumpStarted    bool
 
-	scaling       float64
-	scalingFactor float64 // TODO(lutzky): Rename me
+	scaling float64
+
+	scalingFactorOnHit float64
 
 	marginTop, marginLeft, marginBottom, marginRight float64
 }
@@ -48,8 +49,8 @@ func New() Player {
 		jumpSpeed:      12,
 		jumpHoverSpeed: 3,
 
-		scaling:       1,
-		scalingFactor: 1, // 0.9, TODO(lutzky): Set me back to 0.9
+		scaling:            1,
+		scalingFactorOnHit: 1, // 0.9, TODO(lutzky): Set me back to 0.9
 
 		marginTop:    6,
 		marginLeft:   6,
@@ -146,8 +147,8 @@ func (p *Player) HandleJump(jumpKeyDown bool) {
 }
 
 func (p *Player) Scale() {
-	p.rect.Scale(p.scalingFactor)
-	p.scaling *= p.scalingFactor
+	p.rect.Scale(p.scalingFactorOnHit)
+	p.scaling *= p.scalingFactorOnHit
 }
 
 func (p *Player) DebugString() string {
