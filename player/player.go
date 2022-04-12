@@ -50,7 +50,7 @@ func New() Player {
 		jumpHoverSpeed: 3,
 
 		scaling:            1,
-		scalingFactorOnHit: 1, // 0.9, TODO(lutzky): Set me back to 0.9
+		scalingFactorOnHit: 0.9,
 
 		marginTop:    6,
 		marginLeft:   6,
@@ -60,19 +60,19 @@ func New() Player {
 }
 
 func (p *Player) SetLeft(x float64) {
-	p.rect.SetLeft(x - p.marginLeft)
+	p.rect.SetLeft(x - math.Ceil(p.marginLeft*p.scaling))
 }
 
 func (p *Player) SetRight(x float64) {
-	p.rect.SetRight(x + p.marginRight)
+	p.rect.SetRight(x + math.Ceil(p.marginRight*p.scaling))
 }
 
 func (p *Player) SetTop(y float64) {
-	p.rect.SetTop(y - p.marginTop)
+	p.rect.SetTop(y - math.Ceil(p.marginTop*p.scaling))
 }
 
 func (p *Player) SetBottom(y float64) {
-	p.rect.SetBottom(y + p.marginBottom)
+	p.rect.SetBottom(y - math.Ceil(p.marginBottom*p.scaling))
 }
 
 func (p *Player) MoveX(dX float64) {
@@ -85,10 +85,10 @@ func (p *Player) MoveY(dY float64) {
 
 func (p *Player) Hitbox() rectangle.Rectangle[float64] {
 	return rectangle.Rect(
-		p.rect.Min.X+p.marginLeft,
-		p.rect.Min.Y+p.marginTop,
-		p.rect.Max.X-p.marginRight,
-		p.rect.Max.Y-p.marginBottom,
+		p.rect.Min.X+math.Ceil(p.marginLeft*p.scaling),
+		p.rect.Min.Y+math.Ceil(p.marginTop*p.scaling),
+		p.rect.Max.X-math.Ceil(p.marginRight*p.scaling),
+		p.rect.Max.Y-math.Ceil(p.marginBottom*p.scaling),
 	)
 }
 
@@ -151,6 +151,6 @@ func (p *Player) Scale() {
 }
 
 func (p *Player) DebugString() string {
-	return fmt.Sprintf("Pos: (%3.0f,%3.0f) V: (%3.1f,%3.1f)",
-		p.rect.Min.X, p.rect.Min.Y, p.VX, p.VY)
+	return fmt.Sprintf("%.2f V: (%3.1f,%3.1f)\nHITBOX: %.2f",
+		p.rect, p.VX, p.VY, p.Hitbox())
 }
