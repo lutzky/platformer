@@ -139,8 +139,8 @@ func (g *Game) handleYCollisions() {
 			if player.VY > 0 {
 				player.SetBottom(t.rect().Min.Y)
 			} else if player.VY < 0 {
-				player.SetTop(t.rect().Max.Y)
 				player.Scale()
+				player.SetTop(t.rect().Max.Y)
 			}
 			player.VY = 0
 		}
