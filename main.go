@@ -69,6 +69,19 @@ var player = Player{
 	marginBottom: 0,
 }
 
+func (p *Player) SetLeft(x float64) {
+	p.rect.SetLeft(x - p.marginLeft)
+}
+func (p *Player) SetRight(x float64) {
+	p.rect.SetRight(x + p.marginRight)
+}
+func (p *Player) SetTop(y float64) {
+	p.rect.SetTop(y - p.marginTop)
+}
+func (p *Player) SetBottom(y float64) {
+	p.rect.SetBottom(y + p.marginBottom)
+}
+
 func (player *Player) hitbox() rectangle.Rectangle[float64] {
 	return rectangle.Rect(
 		player.rect.Min.X+player.marginLeft,
@@ -226,10 +239,10 @@ func (g *Game) handleXCollisions() {
 	for _, t := range tiles {
 		if hitbox.Overlaps(t.rect()) {
 			if player.vX > 0 {
-				player.rect.SetRight(t.rect().Min.X + player.marginRight)
+				player.SetRight(t.rect().Min.X)
 				player.vX = 0
 			} else if player.vX < 0 {
-				player.rect.SetLeft(t.rect().Max.X - player.marginLeft)
+				player.SetLeft(t.rect().Max.X)
 				player.vX = -0.01
 			}
 		}
@@ -249,9 +262,9 @@ func (g *Game) handleYCollisions() {
 	for _, t := range tiles {
 		if player.hitbox().Overlaps(t.rect()) {
 			if player.vY > 0 {
-				player.rect.SetBottom(t.rect().Min.Y)
+				player.SetBottom(t.rect().Min.Y)
 			} else {
-				player.rect.SetTop(t.rect().Max.Y - player.marginTop)
+				player.SetTop(t.rect().Max.Y)
 				player.rect.Scale(player.scalingFactor)
 				player.scaling *= player.scalingFactor
 			}
