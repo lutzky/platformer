@@ -5,8 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-bevy = { version = "0.13.1", features = ["dynamic_linking"] }
+[dependencies.bevy]
+version = "0.13.1"
+# features = ["dynamic_linking"] # TODO doesn't work with wasm32, maybe some way to automatically disable it for that target?
 
 [profile.dev]
 opt-level = 1

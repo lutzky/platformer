@@ -1,8 +1,15 @@
 use bevy::prelude::*;
+use bevy::window::WindowResolution;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()).set(WindowPlugin {
+            primary_window: Some(Window {
+                resolution: WindowResolution::new(320.,200.).with_scale_factor_override(6.0),
+                ..default()
+            }),
+            ..default()
+        }))
         .add_systems(Startup, setup)
         .add_systems(Update, animate_sprite)
         .add_systems(Update, player_movement)
@@ -10,16 +17,19 @@ fn main() {
 }
 
 #[derive(Component)]
-struct AnimationTimer(Timer);
+struct AnimationTimer {
+    timer: Timer,
+    frame_count: usize
+}
 
 #[derive(Component)]
 struct Player;
 
 fn animate_sprite(time: Res<Time>, mut query: Query<(&mut AnimationTimer, &mut TextureAtlas)>) {
     for (mut timer, mut atlas) in query.iter_mut() {
-        timer.0.tick(time.delta());
-        if timer.0.just_finished() {
-            atlas.index = (atlas.index + 1) % 11;
+        timer.timer.tick(time.delta());
+        if timer.timer.just_finished() {
+            atlas.index = (atlas.index + 1) % timer.frame_count;
         }
     }
 }
@@ -33,10 +43,10 @@ fn player_movement(
     };
 
     if keyboard_input.pressed(KeyCode::ArrowUp) {
-        transform.translation += Vec3::new(0.0, 6.0, 0.0);
+        transform.translation += Vec3::new(0.0, 1.0, 0.0);
     }
     if keyboard_input.pressed(KeyCode::ArrowDown) {
-        transform.translation += Vec3::new(0.0,- 6.0, 0.0);
+        transform.translation += Vec3::new(0.0,- 1.0, 0.0);
     }
 }
 
@@ -57,10 +67,13 @@ fn setup(
                 layout: texture_atlas_layout,
                 index: 0,
             },
-            transform: Transform::from_scale(Vec3::splat(6.0)),
+            // transform: Transform::from_scale(Vec3::splat(1.0)),
             ..default()
         },
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+        AnimationTimer {
+            timer: Timer::from_seconds(0.1, TimerMode::Repeating),
+            frame_count: 11,
+        },
         Player {},
     ));
 }
