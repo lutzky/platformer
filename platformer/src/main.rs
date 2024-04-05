@@ -1,15 +1,11 @@
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
+use bevy_pixel_camera::{PixelCameraPlugin, PixelViewport, PixelZoom};
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()).set(WindowPlugin {
-            primary_window: Some(Window {
-                resolution: WindowResolution::new(320.,200.).with_scale_factor_override(6.0),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(PixelCameraPlugin)
         .add_systems(Startup, setup)
         .add_systems(Update, animate_sprite)
         .add_systems(Update, player_movement)
@@ -19,7 +15,7 @@ fn main() {
 #[derive(Component)]
 struct AnimationTimer {
     timer: Timer,
-    frame_count: usize
+    frame_count: usize,
 }
 
 #[derive(Component)]
@@ -46,7 +42,7 @@ fn player_movement(
         transform.translation += Vec3::new(0.0, 1.0, 0.0);
     }
     if keyboard_input.pressed(KeyCode::ArrowDown) {
-        transform.translation += Vec3::new(0.0,- 1.0, 0.0);
+        transform.translation += Vec3::new(0.0, -1.0, 0.0);
     }
 }
 
@@ -59,7 +55,14 @@ fn setup(
     let texture = asset_server.load("sprites/Idle (32x32).png");
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
 
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((
+        Camera2dBundle::default(),
+        PixelZoom::FitSize {
+            width: 320,
+            height: 180,
+        },
+        PixelViewport,
+    ));
     commands.spawn((
         SpriteSheetBundle {
             texture,
