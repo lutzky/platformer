@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies.bevy]
 version = "0.13.1"
-# features = ["dynamic_linking"] # TODO doesn't work with wasm32, maybe some way to automatically disable it for that target?
+features = ["dynamic_linking"] # TODO doesn't work with wasm32
 
 [profile.dev]
 opt-level = 1
