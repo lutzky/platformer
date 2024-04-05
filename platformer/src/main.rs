@@ -9,6 +9,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, animate_sprite)
         .add_systems(Update, player_movement)
+        .add_systems(Update, position_movement)
         .run();
 }
 
@@ -19,7 +20,16 @@ struct AnimationTimer {
 }
 
 #[derive(Component)]
-struct Player;
+struct Position {
+    x: i16,
+    y: i16,
+}
+
+#[derive(Component)]
+struct Player {
+    vx: i16,
+    vy: i16,
+}
 
 fn animate_sprite(time: Res<Time>, mut query: Query<(&mut AnimationTimer, &mut TextureAtlas)>) {
     for (mut timer, mut atlas) in query.iter_mut() {
@@ -32,17 +42,42 @@ fn animate_sprite(time: Res<Time>, mut query: Query<(&mut AnimationTimer, &mut T
 
 fn player_movement(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut player: Query<&mut Transform, With<Player>>,
+    mut player: Query<(&mut Position, &mut Player)>,
 ) {
-    let Ok(mut transform) = player.get_single_mut() else {
+    let Ok((mut position, mut player)) = player.get_single_mut() else {
         return;
     };
 
-    if keyboard_input.pressed(KeyCode::ArrowUp) {
-        transform.translation += Vec3::new(0.0, 1.0, 0.0);
+    if keyboard_input.pressed(KeyCode::ArrowRight) {
+        player.vx += 10;
+    } else if keyboard_input.pressed(KeyCode::ArrowLeft) {
+        player.vx -= 10;
+    } else if player.vx > 0 {
+        player.vx = (player.vx - 30).max(0);
+    } else if player.vx < 0 {
+        player.vx = (player.vx + 30).min(0);
     }
-    if keyboard_input.pressed(KeyCode::ArrowDown) {
-        transform.translation += Vec3::new(0.0, -1.0, 0.0);
+
+    player.vy = player.vy.clamp(-512, 512);
+    player.vx = player.vx.clamp(-512, 512);
+
+    position.x += player.vx;
+    position.y += player.vy;
+
+    if !(-100 * 160..100 * 160).contains(&position.x) {
+        player.vx = 0;
+    }
+    if !(-100 * 90..100 * 90).contains(&position.y) {
+        player.vy = 0;
+    }
+    position.x = position.x.clamp(-100 * 160, 100 * 160);
+    position.y = position.y.clamp(-100 * 90, 100 * 90);
+}
+
+fn position_movement(mut query: Query<(&mut Transform, &Position)>) {
+    for (mut transform, position) in query.iter_mut() {
+        transform.translation.x = (position.x / 256).into();
+        transform.translation.y = (position.y / 256).into();
     }
 }
 
@@ -77,6 +112,7 @@ fn setup(
             timer: Timer::from_seconds(0.1, TimerMode::Repeating),
             frame_count: 11,
         },
-        Player {},
+        Player { vx: 0, vy: 0 },
+        Position { x: 0, y: 0 },
     ));
 }
