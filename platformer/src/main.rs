@@ -1,17 +1,47 @@
 use bevy::prelude::*;
-use bevy::window::WindowResolution;
+use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy_pixel_camera::{PixelCameraPlugin, PixelViewport, PixelZoom};
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins((
+            DefaultPlugins.set(ImagePlugin::default_nearest()),
+            OverlayPlugin {
+                font_size: 23.0,
+                ..default()
+            },
+        ))
         .add_plugins(PixelCameraPlugin)
         .add_systems(Startup, setup)
+        // checkIsOnFloor
+        // handleInput
+        // moveX
+        // handleXCollisions
+        // moveY
+        .add_systems(Update, handle_input_x)
+        .add_systems(Update, handle_jump)
+        .add_systems(Update, apply_gravity)
+        .add_systems(Update, handle_y_collisions)
         .add_systems(Update, animate_sprite)
-        .add_systems(Update, player_movement)
         .add_systems(Update, position_movement)
         .run();
 }
+
+const SUBPIXEL_RES: i16 = 128;
+const SCREEN_WIDTH: i16 = 320;
+const SCREEN_HEIGHT: i16 = 180;
+
+const TILE_MAP: [&str; 9] = [
+    "..........",
+    "..........",
+    "..xxxx....",
+    "..........",
+    ".x.......x",
+    "..x.....xx",
+    "...x...xxx",
+    "......xxxx",
+    "xxxxxxxxxx",
+];
 
 #[derive(Component)]
 struct AnimationTimer {
@@ -29,6 +59,28 @@ struct Position {
 struct Player {
     vx: i16,
     vy: i16,
+
+    is_on_floor: bool,
+
+    is_jumping: bool,
+    jump_hover_speed: i16,
+    jump_speed: i16,
+    jump_started: bool,
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Self {
+            jump_speed: 12 * SUBPIXEL_RES,
+            jump_hover_speed: 3 * SUBPIXEL_RES,
+            vx: 0,
+            vy: 0,
+
+            is_on_floor: false,
+            is_jumping: false,
+            jump_started: false,
+        }
+    }
 }
 
 fn animate_sprite(time: Res<Time>, mut query: Query<(&mut AnimationTimer, &mut TextureAtlas)>) {
@@ -40,13 +92,78 @@ fn animate_sprite(time: Res<Time>, mut query: Query<(&mut AnimationTimer, &mut T
     }
 }
 
-fn player_movement(
+fn handle_y_collisions(mut player: Query<(&mut Position, &mut Player)>) {
+    let Ok((mut position, mut player)) = player.get_single_mut() else {
+        return;
+    };
+
+    // TODO: Check tiles
+
+    if position.y < -(SCREEN_HEIGHT / 2) * SUBPIXEL_RES + 16{
+        position.y = -(SCREEN_HEIGHT / 2) * SUBPIXEL_RES + 16;
+        player.vy = 0;
+        player.is_on_floor = true;
+    }
+}
+
+fn apply_gravity(mut player: Query<(&mut Position, &mut Player)>) {
+    let Ok((mut position, mut player)) = player.get_single_mut() else {
+        return;
+    };
+
+    if player.is_on_floor {
+        return;
+    };
+
+    player.vy = (player.vy - 200).max(-10 * SUBPIXEL_RES);
+}
+
+fn handle_jump(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut player: Query<(&mut Position, &mut Player)>,
 ) {
     let Ok((mut position, mut player)) = player.get_single_mut() else {
         return;
     };
+
+    if player.vy <= 0 {
+        player.is_jumping = false;
+    }
+
+    if keyboard_input.pressed(KeyCode::Space) {
+        if !player.jump_started {
+            screen_print!(sec:0.5, "jump!");
+            player.jump_started = true;
+            if player.is_on_floor {
+                player.vy = player.jump_speed;
+                position.y += SUBPIXEL_RES * 10;
+            }
+        }
+    } else {
+        player.jump_started = false;
+        if player.is_jumping && player.vy > player.jump_hover_speed {
+            player.vy = player.jump_hover_speed
+        }
+        player.is_jumping = false
+    }
+}
+
+fn handle_input_x(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut player: Query<(&mut Position, &mut Player)>,
+) {
+    let Ok((mut position, mut player)) = player.get_single_mut() else {
+        return;
+    };
+
+    screen_print!(
+        "player: ({},{}) v:({},{}) on_floor: {}",
+        position.x / SUBPIXEL_RES,
+        position.y / SUBPIXEL_RES,
+        player.vx / SUBPIXEL_RES,
+        player.vy / SUBPIXEL_RES,
+        player.is_on_floor
+    );
 
     if keyboard_input.pressed(KeyCode::ArrowRight) {
         player.vx += 10;
@@ -64,20 +181,19 @@ fn player_movement(
     position.x += player.vx;
     position.y += player.vy;
 
-    if !(-100 * 160..100 * 160).contains(&position.x) {
+    if !(-100 * (SCREEN_WIDTH / 2)..100 * (SCREEN_WIDTH / 2)).contains(&position.x) {
         player.vx = 0;
     }
-    if !(-100 * 90..100 * 90).contains(&position.y) {
+    if !(-100 * (SCREEN_HEIGHT / 2)..100 * (SCREEN_HEIGHT / 2)).contains(&position.y) {
         player.vy = 0;
     }
-    position.x = position.x.clamp(-100 * 160, 100 * 160);
-    position.y = position.y.clamp(-100 * 90, 100 * 90);
+    position.x = position.x.clamp(-(SCREEN_WIDTH / 2) * SUBPIXEL_RES, (SCREEN_WIDTH / 2) * SUBPIXEL_RES);
 }
 
 fn position_movement(mut query: Query<(&mut Transform, &Position)>) {
     for (mut transform, position) in query.iter_mut() {
-        transform.translation.x = (position.x / 256).into();
-        transform.translation.y = (position.y / 256).into();
+        transform.translation.x = (position.x / SUBPIXEL_RES).into();
+        transform.translation.y = (position.y / SUBPIXEL_RES).into();
     }
 }
 
@@ -93,8 +209,8 @@ fn setup(
     commands.spawn((
         Camera2dBundle::default(),
         PixelZoom::FitSize {
-            width: 320,
-            height: 180,
+            width: SCREEN_WIDTH.into(),
+            height: SCREEN_HEIGHT.into(),
         },
         PixelViewport,
     ));
@@ -112,7 +228,7 @@ fn setup(
             timer: Timer::from_seconds(0.1, TimerMode::Repeating),
             frame_count: 11,
         },
-        Player { vx: 0, vy: 0 },
+        Player { ..default() },
         Position { x: 0, y: 0 },
     ));
 }
