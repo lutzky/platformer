@@ -1,3 +1,5 @@
+use std::{cmp::Ordering, collections::HashMap};
+
 use bevy::prelude::*;
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy_pixel_camera::{PixelCameraPlugin, PixelViewport, PixelZoom};
@@ -18,6 +20,7 @@ fn main() {
         // moveX
         // handleXCollisions
         // moveY
+        .add_systems(Update, change_player_animation)
         .add_systems(Update, handle_input_x)
         .add_systems(Update, handle_x_collisions)
         .add_systems(Update, handle_jump)
@@ -34,8 +37,8 @@ const SCREEN_HEIGHT: i16 = 180;
 const GRAVITY: i16 = 3;
 const TERMINAL_VELOCITY: i16 = 10;
 
-const DEFAULT_JUMP_SPEED: i16 = 2*SUBPIXEL_RES;
-const DEFAULT_JUMP_HOVER_SPEED: i16 = SUBPIXEL_RES/2;
+const DEFAULT_JUMP_SPEED: i16 = 2 * SUBPIXEL_RES;
+const DEFAULT_JUMP_HOVER_SPEED: i16 = SUBPIXEL_RES / 2;
 
 const TILE_MAP: [&str; 9] = [
     "..........",
@@ -53,6 +56,13 @@ const TILE_MAP: [&str; 9] = [
 struct AnimationTimer {
     timer: Timer,
     frame_count: usize,
+}
+
+#[derive(Component, PartialEq, Eq)]
+enum AnimationState {
+    Idle,
+    MovingRight,
+    MovingLeft,
 }
 
 #[derive(Component)]
@@ -220,6 +230,104 @@ fn position_movement(mut query: Query<(&mut Transform, &Position)>) {
     }
 }
 
+fn change_player_animation(
+    mut commands: Commands,
+    mut player: Query<(
+        Entity,
+        &mut AnimationState,
+        &mut TextureAtlas,
+        &mut AnimationTimer,
+        &Player,
+    )>,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    let Ok((player_entity, animation_state, _, _, player)) = player.get_single_mut() else {
+        return;
+    };
+
+    let desired_animation_state = match player.vx.cmp(&0) {
+        Ordering::Greater => AnimationState::MovingRight,
+        Ordering::Less => AnimationState::MovingLeft,
+        Ordering::Equal => AnimationState::Idle,
+    };
+
+    if desired_animation_state == *animation_state {
+        return;
+    }
+
+    let mut player_entity = commands.entity(player_entity);
+
+    player_entity.remove::<AnimationTimer>();
+
+    match desired_animation_state {
+        AnimationState::Idle => {
+            player_entity.insert(AnimationState::Idle);
+            let layout = TextureAtlasLayout::from_grid(Vec2::new(32.0, 32.0), 11, 1, None, None);
+            let texture = asset_server.load("sprites/Idle (32x32).png");
+            let texture_atlas_layout = texture_atlas_layouts.add(layout);
+
+            player_entity.insert(AnimationTimer {
+                timer: Timer::from_seconds(0.1, TimerMode::Repeating),
+                frame_count: 11,
+            });
+            player_entity.insert(SpriteSheetBundle {
+                texture,
+                atlas: TextureAtlas {
+                    layout: texture_atlas_layout,
+                    index: 0,
+                },
+                // transform: Transform::from_scale(Vec3::splat(1.0)),
+                ..default()
+            });
+        }
+        AnimationState::MovingRight => {
+            player_entity.insert(AnimationState::MovingRight);
+            let layout = TextureAtlasLayout::from_grid(Vec2::new(32.0, 32.0), 12, 1, None, None);
+            let texture = asset_server.load("sprites/Run (32x32).png");
+            let texture_atlas_layout = texture_atlas_layouts.add(layout);
+
+            player_entity.insert(AnimationTimer {
+                timer: Timer::from_seconds(0.1, TimerMode::Repeating),
+                frame_count: 12,
+            });
+            player_entity.insert(SpriteSheetBundle {
+                texture,
+                atlas: TextureAtlas {
+                    layout: texture_atlas_layout,
+                    index: 0,
+                },
+                // transform: Transform::from_scale(Vec3::splat(1.0)),
+                ..default()
+            });
+        }
+        AnimationState::MovingLeft => {
+            player_entity.insert(AnimationState::MovingLeft);
+            let layout = TextureAtlasLayout::from_grid(Vec2::new(32.0, 32.0), 12, 1, None, None);
+            let texture = asset_server.load("sprites/Run (32x32).png");
+            let texture_atlas_layout = texture_atlas_layouts.add(layout);
+
+            player_entity.insert(AnimationTimer {
+                timer: Timer::from_seconds(0.1, TimerMode::Repeating),
+                frame_count: 12,
+            });
+            player_entity.insert(SpriteSheetBundle {
+                texture,
+                atlas: TextureAtlas {
+                    layout: texture_atlas_layout,
+                    index: 0,
+                },
+                sprite: Sprite {
+                    flip_x: true,
+                    ..default()
+                },
+                // transform: Transform::from_scale(Vec3::splat(1.0)),
+                ..default()
+            });
+        }
+    }
+}
+
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -247,6 +355,7 @@ fn setup(
             // transform: Transform::from_scale(Vec3::splat(1.0)),
             ..default()
         },
+        AnimationState::Idle,
         AnimationTimer {
             timer: Timer::from_seconds(0.1, TimerMode::Repeating),
             frame_count: 11,
